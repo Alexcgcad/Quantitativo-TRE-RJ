@@ -1,0 +1,1814 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRE-RJ | Painel de Gestão da Força de Trabalho</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js 4.4.0 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'tre-navy': '#15314b',
+                        'tre-blue': '#1c4966',
+                        'tre-light-blue': '#4c7b9b',
+                        'tre-gold': '#d4a359',
+                        'tre-bg': '#f1f5f9',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #eef2f6;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .infographic-card {
+            background-color: #ffffff;
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 9999px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+        .interactive-tile {
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            user-select: none;
+        }
+        .interactive-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(28, 73, 102, 0.1);
+        }
+        .interactive-tile:active { transform: scale(0.98); }
+        .interactive-tile.active-filter {
+            border-color: #1c4966 !important;
+            background-color: #f0f7fc !important;
+            box-shadow: 0 0 0 2px #1c4966;
+        }
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .chart-wrapper canvas {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-6 px-3 sm:px-6 lg:px-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- CABEÇALHO -->
+        <header class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="h-2.5 bg-gradient-to-r from-tre-navy via-tre-light-blue to-tre-gold"></div>
+            
+            <div class="p-6 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <span class="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-slate-100 text-tre-navy rounded-md border border-slate-200">
+                            TRE-RJ
+                        </span>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            Secretaria de Gestão de Pessoas | SGP
+                        </span>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            CGCAD
+                        </span>
+                        <span class="px-3 py-1 text-xs font-bold bg-slate-100 text-slate-700 rounded-full border border-slate-200 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                            <span id="lblReferenceMonth">Mês de Referência: Outubro/2026</span>
+                        </span>
+                    </div>
+                    
+                    <h1 class="text-3xl md:text-4xl font-black text-tre-navy tracking-tight">
+                        Nossa força de trabalho
+                    </h1>
+                    <p class="text-xs text-slate-500 max-w-2xl">
+                        Painel oficial de transparência estatística e governança de pessoal do Tribunal Regional Eleitoral do Rio de Janeiro.
+                    </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 shadow-inner">
+                        <div class="p-2 bg-blue-100/70 text-tre-navy rounded-lg shrink-0">
+                            <i data-lucide="database" class="w-5 h-5 text-tre-blue"></i>
+                        </div>
+                        <div class="text-xs space-y-0.5">
+                            <div class="text-slate-500 font-medium">Data-base: <strong id="lblBaseCadastral" class="text-slate-800">27/10/2026</strong></div>
+                            <div class="text-slate-500 font-medium flex items-center gap-1.5">
+                                <span>Status:</span>
+                                <span id="lblLiveStatus" class="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    <span>Base Ativa (Salva)</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Acesso Protegido por PIN -->
+                    <button id="btnOpenAdmin" onclick="openPinModal()" type="button" class="cursor-pointer flex items-center justify-center gap-2 bg-tre-navy hover:bg-tre-blue text-white px-4 py-3 rounded-xl font-semibold text-xs shadow-md transition-all active:scale-95 shrink-0">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-tre-gold"></i>
+                        <span id="txtBtnAdmin">Área do Gestor (Atualizar Base)</span>
+                    </button>
+
+                    <!-- Botão de Bloqueio -->
+                    <button id="btnLogoutAdmin" onclick="logoutAdmin()" type="button" class="hidden cursor-pointer flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-3 py-3 rounded-xl font-semibold text-xs shadow-md transition-all shrink-0">
+                        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                        <span>Bloquear</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FILTRO ATIVO -->
+            <div id="activeFilterBar" class="hidden bg-amber-50/90 border-t border-amber-200 px-6 py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-amber-900 flex-wrap">
+                    <i data-lucide="filter" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                    <span>Filtro ativo:</span>
+                    <strong id="activeFilterText" class="font-bold bg-white px-2.5 py-0.5 rounded-full border border-amber-300 text-tre-navy shadow-xs">Todos</strong>
+                </div>
+                <button onclick="clearCurrentFilter()" type="button" class="flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:text-rose-900 bg-white hover:bg-rose-50 px-3 py-1 rounded-lg border border-rose-200 transition-colors">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    <span>Limpar Filtro</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- BANNER DE SUCESSO -->
+        <section id="bannerPublicUpdate" class="hidden infographic-card p-4 border-l-4 border-l-emerald-600 bg-emerald-50/70 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-emerald-100 text-emerald-700 rounded-lg shrink-0">
+                    <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-emerald-950" id="bannerPublicTitle">Dados atualizados com sucesso!</div>
+                    <div class="text-[11px] text-slate-600" id="bannerPublicSubtitle">Base gravada com fidelidade a partir das planilhas.</div>
+                </div>
+            </div>
+            <button onclick="document.getElementById('bannerPublicUpdate').classList.add('hidden')" type="button" class="text-slate-400 hover:text-slate-600 p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </section>
+
+        <!-- GRID PRINCIPAL DE CARDS -->
+        <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- SEÇÃO 1: NOSSA FORÇA DE TRABALHO -->
+            <section class="infographic-card p-6" id="section-1">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="section-badge bg-[#1c4966]">1</span>
+                        <h2 class="text-xl font-bold text-tre-navy">Nossa força de trabalho</h2>
+                    </div>
+
+                    <div onclick="setFilter('all', 'Total Geral')" class="interactive-tile flex items-center justify-between p-4 bg-blue-50/80 hover:bg-blue-100/70 rounded-2xl border border-blue-200 w-full mb-3.5 shadow-xs">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 bg-white text-tre-navy rounded-xl shadow-xs shrink-0">
+                                <i data-lucide="users" class="w-7 h-7 text-tre-blue"></i>
+                            </div>
+                            <div>
+                                <span id="valTotalServidores" class="text-3xl font-black text-tre-navy leading-none">1.633</span>
+                                <div class="text-xs font-bold text-tre-blue uppercase tracking-wider mt-1">Total da força de trabalho</div>
+                            </div>
+                        </div>
+                        <div class="text-right text-xs text-slate-500 font-medium">
+                            Base ativa consolidada
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 w-full mb-5">
+                        <div id="tile-efetivo" onclick="setFilter('efetivo', 'Efetivos em exercício')" class="interactive-tile bg-slate-50 hover:bg-blue-50/50 p-3 rounded-xl border border-slate-200 text-center flex flex-col justify-between items-center min-h-[96px]">
+                            <span class="text-[11px] font-semibold text-slate-700 leading-tight">Efetivos em exercício</span>
+                            <span id="valEfetivos" class="text-lg font-black text-tre-navy mt-1">1.254</span>
+                        </div>
+                        <div id="tile-requisitado" onclick="setFilter('requisitado', 'Requisitados')" class="interactive-tile bg-slate-50 hover:bg-amber-50/50 p-3 rounded-xl border border-slate-200 text-center flex flex-col justify-between items-center min-h-[96px]">
+                            <span class="text-[11px] font-semibold text-slate-700 leading-tight">Requisitados</span>
+                            <span id="valRequisitados" class="text-lg font-black text-amber-600 mt-1">374</span>
+                        </div>
+                        <div id="tile-cedido" onclick="setFilter('cedido', 'Cedidos / Removidos')" class="interactive-tile bg-slate-50 hover:bg-slate-100 p-3 rounded-xl border border-slate-200 text-center flex flex-col justify-between items-center min-h-[96px]">
+                            <span class="text-[10px] font-semibold text-slate-700 leading-tight">Cedidos / removidos</span>
+                            <span id="valCedidos" class="text-lg font-black text-slate-700 mt-1">36</span>
+                        </div>
+                        <div id="tile-semvinculo" onclick="setFilter('semvinculo', 'Sem Vínculo')" class="interactive-tile bg-slate-50 hover:bg-slate-100 p-3 rounded-xl border border-slate-200 text-center flex flex-col justify-between items-center min-h-[96px]">
+                            <span class="text-[11px] font-semibold text-slate-700 leading-tight">Sem vínculo</span>
+                            <span id="valSemVinculo" class="text-lg font-black text-slate-600 mt-1">5</span>
+                        </div>
+                        <div id="tile-estagiarios" onclick="setFilter('estagiarios', 'Estagiários')" class="interactive-tile bg-emerald-50/80 hover:bg-emerald-100/70 p-3 rounded-xl border border-emerald-200 text-center flex flex-col justify-between items-center min-h-[96px]">
+                            <span class="text-[11px] font-bold text-emerald-800 leading-tight">Estagiários</span>
+                            <span id="valEstagiarios" class="text-lg font-black text-emerald-700 mt-1">53</span>
+                        </div>
+                    </div>
+
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+                        Composição da força de trabalho
+                    </div>
+
+                    <div class="space-y-2.5">
+                        <div onclick="setFilter('efetivo', 'Efetivos em exercício')" class="group cursor-pointer p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                                <span class="group-hover:text-tre-navy group-hover:font-bold transition-colors">Efetivos em exercício no TRE-RJ</span>
+                                <span class="font-bold text-tre-navy"><span id="lblEfetivosNum">1.254</span> <span id="lblEfetivosPct" class="text-slate-500 font-normal">(76,8%)</span></span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                                <div id="barEfetivos" class="bg-[#1c4966] group-hover:bg-[#15314b] h-full rounded-full transition-all duration-300" style="width: 76.8%"></div>
+                            </div>
+                        </div>
+
+                        <div onclick="setFilter('requisitado', 'Requisitados')" class="group cursor-pointer p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                                <span class="group-hover:text-amber-700 group-hover:font-bold transition-colors">Requisitados</span>
+                                <span class="font-bold text-amber-700"><span id="lblRequisitadosNum">374</span> <span id="lblRequisitadosPct" class="text-slate-500 font-normal">(22,9%)</span></span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                                <div id="barRequisitados" class="bg-amber-500 group-hover:bg-amber-600 h-full rounded-full transition-all duration-300" style="width: 22.9%"></div>
+                            </div>
+                        </div>
+
+                        <div onclick="setFilter('semvinculo', 'Sem Vínculo')" class="group cursor-pointer p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                                <span class="group-hover:text-slate-800 group-hover:font-bold transition-colors">Sem vínculo</span>
+                                <span class="font-bold text-slate-600"><span id="lblSemVinculoNum">5</span> <span id="lblSemVinculoPct" class="text-slate-500 font-normal">(0,3%)</span></span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                                <div id="barSemVinculo" class="bg-slate-400 group-hover:bg-slate-500 h-full rounded-full transition-all duration-300" style="width: 0.3%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 2: ONDE ESTAMOS? -->
+            <section class="infographic-card p-6" id="section-2">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="section-badge bg-[#ea8c2f]">2</span>
+                        <h2 class="text-xl font-bold text-tre-navy">Onde estamos?</h2>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-5">
+                        <div id="tile-zonas" onclick="setFilter('zonas', 'Zonas Eleitorais')" class="interactive-tile flex items-center gap-3 p-3.5 bg-orange-50/80 rounded-xl border border-orange-200">
+                            <div class="p-2.5 bg-orange-100 text-[#ea8c2f] rounded-lg shrink-0">
+                                <i data-lucide="map-pin" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-medium text-slate-600">Zonas Eleitorais</div>
+                                <div id="valZonas" class="text-2xl font-black text-tre-navy leading-tight">1.035</div>
+                                <div id="lblZonasSub" class="text-[11px] text-orange-700 font-semibold">63,4% dos servidores</div>
+                            </div>
+                        </div>
+
+                        <div id="tile-sede" onclick="setFilter('sede', 'Sede do Tribunal')" class="interactive-tile flex items-center gap-3 p-3.5 bg-amber-50/80 rounded-xl border border-amber-200">
+                            <div class="p-2.5 bg-amber-100 text-amber-700 rounded-lg shrink-0">
+                                <i data-lucide="building-2" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-medium text-slate-600">Sede</div>
+                                <div id="valSede" class="text-2xl font-black text-tre-navy leading-tight">588</div>
+                                <div id="lblSedeSub" class="text-[11px] text-amber-800 font-semibold">36,0% dos servidores</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="text-xs font-bold text-slate-700">Distribuição por local de lotação</div>
+                        <div class="space-y-2.5">
+                            <div onclick="setFilter('zonas', 'Zonas Eleitorais')" class="cursor-pointer group p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-600 font-medium group-hover:text-tre-navy">Zonas Eleitorais</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblDistZonas">1.035 (63,4%)</span></span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5 mt-1 overflow-hidden">
+                                    <div id="barDistZonas" class="bg-[#1c4966] h-full rounded-full transition-all" style="width: 63.4%"></div>
+                                </div>
+                            </div>
+                            <div onclick="setFilter('sede', 'Sede do Tribunal')" class="cursor-pointer group p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-600 font-medium group-hover:text-amber-700">Sede</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblDistSede">588 (36,0%)</span></span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5 mt-1 overflow-hidden">
+                                    <div id="barDistSede" class="bg-amber-500 h-full rounded-full transition-all" style="width: 36.0%"></div>
+                                </div>
+                            </div>
+                            <div onclick="setFilter('outros', 'Outros (sem lotação)')" class="cursor-pointer group p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-600 font-medium group-hover:text-slate-800">Outros</span>
+                                    <span class="font-bold text-slate-700"><span id="lblDistOutros">10 (0,6%)</span></span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5 mt-1 overflow-hidden">
+                                    <div id="barDistOutros" class="bg-slate-400 h-full rounded-full transition-all" style="width: 0.6%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 3: COMO TRABALHAMOS? -->
+            <section class="infographic-card p-6" id="section-3">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="section-badge bg-[#247c8f]">3</span>
+                        <h2 class="text-xl font-bold text-tre-navy">Como trabalhamos?</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-6">
+                        <div class="relative flex items-center justify-center cursor-pointer" onclick="cycleWorkModeFilter()">
+                            <div class="w-36 h-36 relative">
+                                <div class="chart-wrapper">
+                                    <canvas id="workModeChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                                <span id="centerWorkTotal" class="text-xl font-black text-tre-navy">1.633</span>
+                                <span class="text-[9px] text-slate-500 font-semibold uppercase">servidores</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div id="tile-presencial" onclick="setFilter('presencial', 'Regime Presencial')" class="interactive-tile flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-[#1c4966]"></div>
+                                    <div>
+                                        <div class="text-xs text-slate-500 font-medium">Presencial</div>
+                                        <div class="text-lg font-bold text-tre-navy"><span id="valPresencial">1.567</span> <span id="lblPresencialPct" class="text-xs font-semibold text-slate-500">(96,0%)</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="tile-teletrabalho" onclick="setFilter('teletrabalho', 'Teletrabalho')" class="interactive-tile flex items-center justify-between p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-emerald-500"></div>
+                                    <div>
+                                        <div class="text-xs text-slate-600 font-medium">Teletrabalho</div>
+                                        <div class="text-lg font-bold text-emerald-800"><span id="valTeletrabalho">66</span> <span id="lblTeletrabalhoPct" class="text-xs font-semibold text-emerald-600">(4,0%)</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 4: QUEM SOMOS? -->
+            <section class="infographic-card p-6" id="section-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="section-badge bg-[#c24168]">4</span>
+                        <h2 class="text-xl font-bold text-tre-navy">Quem somos?</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-6 mb-4">
+                        <div class="relative flex items-center justify-center cursor-pointer" onclick="cycleGenderFilter()">
+                            <div class="w-36 h-36 relative">
+                                <div class="chart-wrapper">
+                                    <canvas id="genderChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                                <span id="centerGenderTotal" class="text-xl font-black text-tre-navy">1.633</span>
+                                <span class="text-[9px] text-slate-500 font-semibold uppercase">servidores</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div id="tile-mulheres" onclick="setFilter('mulheres', 'Mulheres')" class="interactive-tile flex items-center justify-between p-3 bg-rose-50/70 rounded-xl border border-rose-200">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-rose-400"></div>
+                                    <span class="text-xs font-bold text-slate-700">Mulheres</span>
+                                </div>
+                                <span class="text-sm font-black text-rose-700"><span id="valMulheres">790</span> <span id="lblMulheresPct" class="text-xs font-normal text-slate-500">(48,4%)</span></span>
+                            </div>
+
+                            <div id="tile-homens" onclick="setFilter('homens', 'Homens')" class="interactive-tile flex items-center justify-between p-3 bg-sky-50/70 rounded-xl border border-sky-200">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-sky-600"></div>
+                                    <span class="text-xs font-bold text-slate-700">Homens</span>
+                                </div>
+                                <span class="text-sm font-black text-sky-800"><span id="valHomens">843</span> <span id="lblHomensPct" class="text-xs font-normal text-slate-500">(51,6%)</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100">
+                        <div class="text-xs font-bold text-slate-700 mb-1.5">Distribuição por faixa etária</div>
+                        <div class="h-28 relative">
+                            <div class="chart-wrapper">
+                                <canvas id="ageChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 5: DIVERSIDADE EM PERSPECTIVA -->
+            <section class="infographic-card p-6" id="section-5">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="section-badge bg-[#7e22ce]">5</span>
+                            <h2 class="text-xl font-bold text-[#581c87]">Diversidade em perspectiva</h2>
+                        </div>
+
+                        <div onclick="setFilter('pcd', 'Pessoas com Deficiência (PcD)')" class="interactive-tile flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-xl border border-purple-200 text-xs shadow-xs hover:bg-purple-100">
+                            <i data-lucide="accessibility" class="w-4 h-4 text-purple-700"></i>
+                            <span class="text-purple-900 font-semibold">PcD:</span>
+                            <strong id="valPcdBadge" class="text-purple-950 font-bold text-sm">70</strong>
+                            <span id="lblPcdBadgePct" class="text-[11px] text-purple-700 font-medium">(4,3%)</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-3">
+                        <div class="lg:col-span-7 flex flex-col justify-between">
+                            <span class="text-xs font-bold text-purple-900 mb-1.5">Distribuição por raça/cor</span>
+                            <div class="h-36 relative">
+                                <div class="chart-wrapper">
+                                    <canvas id="raceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-5 flex flex-col justify-between p-3.5 bg-purple-50/50 rounded-2xl border border-purple-100">
+                            <span class="text-xs font-bold text-purple-900 flex items-center gap-1.5 mb-1">
+                                <i data-lucide="accessibility" class="w-3.5 h-3.5 text-purple-700"></i>
+                                <span>Pessoas com deficiência (PcD)</span>
+                            </span>
+
+                            <div class="relative flex items-center justify-center my-auto py-2">
+                                <div class="w-24 h-24 relative">
+                                    <div class="chart-wrapper">
+                                        <canvas id="pcdChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                                    <span id="centerPcdVal" class="text-base font-black text-purple-950">70</span>
+                                    <span class="text-[9px] text-purple-700 font-bold uppercase">PcD</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5 text-xs pt-2 border-t border-purple-100">
+                                <div onclick="setFilter('pcd', 'Pessoas com Deficiência (PcD)')" class="interactive-tile flex justify-between items-center p-1.5 bg-white rounded-lg border border-purple-200">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-purple-700"></div>
+                                        <span class="text-slate-700 font-medium text-[11px]">Com deficiência</span>
+                                    </div>
+                                    <div class="font-bold text-purple-900 text-xs">
+                                        <span id="valPcdTotal">70</span>
+                                        <span id="lblPcdTotalPct" class="text-[10px] text-purple-600 font-normal">(4,3%)</span>
+                                    </div>
+                                </div>
+
+                                <div onclick="setFilter('all', 'Sem Deficiência Registrada')" class="interactive-tile flex justify-between items-center p-1.5 bg-white/70 rounded-lg border border-slate-200">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-purple-200"></div>
+                                        <span class="text-slate-500 font-medium text-[11px]">Sem deficiência</span>
+                                    </div>
+                                    <div class="font-bold text-slate-700 text-xs">
+                                        <span id="valSemPcdTotal">1.563</span>
+                                        <span id="lblSemPcdTotalPct" class="text-[10px] text-slate-400 font-normal">(95,7%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-1.5 pt-3 border-t border-purple-100 text-center">
+                        <div onclick="setFilter('branca', 'Branca')" class="interactive-tile p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200">
+                            <div class="text-[10px] text-purple-800 font-bold">Branca</div>
+                            <div id="tileRaceBranca" class="text-xs font-black text-purple-950">1.053</div>
+                        </div>
+                        <div onclick="setFilter('parda', 'Parda')" class="interactive-tile p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200">
+                            <div class="text-[10px] text-purple-800 font-bold">Parda</div>
+                            <div id="tileRaceParda" class="text-xs font-black text-purple-950">403</div>
+                        </div>
+                        <div onclick="setFilter('preta', 'Preta')" class="interactive-tile p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200">
+                            <div class="text-[10px] text-purple-800 font-bold">Preta</div>
+                            <div id="tileRacePreta" class="text-xs font-black text-purple-950">141</div>
+                        </div>
+                        <div onclick="setFilter('amarela', 'Amarela')" class="interactive-tile p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200">
+                            <div class="text-[10px] text-purple-800 font-bold">Amarela</div>
+                            <div id="tileRaceAmarela" class="text-xs font-black text-purple-950">33</div>
+                        </div>
+                        <div onclick="setFilter('indigena', 'Indígena')" class="interactive-tile p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200">
+                            <div class="text-[10px] text-purple-800 font-bold">Indígena</div>
+                            <div id="tileRaceIndigena" class="text-xs font-black text-purple-950">3</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 6: QUEM ESTÁ NA LIDERANÇA? -->
+            <section class="infographic-card p-6" id="section-6">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="section-badge bg-[#c47c23]">6</span>
+                        <h2 class="text-xl font-bold text-tre-navy">Quem está na liderança?</h2>
+                    </div>
+
+                    <div id="tile-lideranca" onclick="setFilter('lideranca', 'Titulares de Unidade / Liderança')" class="interactive-tile flex items-center justify-start p-3.5 bg-amber-50/80 hover:bg-amber-100/70 rounded-2xl border border-amber-200 mb-5">
+                        <div class="flex items-center gap-3.5">
+                            <div class="p-3 bg-amber-100 text-amber-700 rounded-xl shadow-xs shrink-0">
+                                <i data-lucide="award" class="w-7 h-7"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-600 uppercase tracking-wide">Titulares de unidade (Chefia / Direção)</div>
+                                <div id="valLideranca" class="text-3xl font-black text-tre-navy">320</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-xs font-bold text-slate-700 mb-2">Por sexo</div>
+                            <div class="space-y-2">
+                                <div onclick="setFilter('mulheres', 'Liderança Feminina')" class="cursor-pointer group p-1 rounded hover:bg-slate-50 transition-colors">
+                                    <div class="flex justify-between text-xs font-medium text-slate-600">
+                                        <span class="group-hover:text-rose-700 group-hover:font-bold">Mulheres (<span id="lblLiderMulheresNum">136</span>)</span>
+                                        <span id="lblLiderMulheresPct" class="font-bold text-rose-700">42,5%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-2.5 mt-1 overflow-hidden">
+                                        <div id="barLiderMulheres" class="bg-rose-400 group-hover:bg-rose-500 h-full rounded-full transition-all" style="width: 42.5%"></div>
+                                    </div>
+                                </div>
+                                <div onclick="setFilter('homens', 'Liderança Masculina')" class="cursor-pointer group p-1 rounded hover:bg-slate-50 transition-colors">
+                                    <div class="flex justify-between text-xs font-medium text-slate-600">
+                                        <span class="group-hover:text-sky-800 group-hover:font-bold">Homens (<span id="lblLiderHomensNum">184</span>)</span>
+                                        <span id="lblLiderHomensPct" class="font-bold text-sky-800">57,5%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-2.5 mt-1 overflow-hidden">
+                                        <div id="barLiderHomens" class="bg-sky-600 group-hover:bg-sky-700 h-full rounded-full transition-all" style="width: 57.5%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-xs font-bold text-slate-700 mb-2">Por raça/cor</div>
+                            <div class="space-y-1.5 text-xs">
+                                <div class="flex justify-between items-center py-0.5 border-b border-slate-100 hover:bg-slate-50 px-1 rounded transition-colors cursor-pointer" onclick="setFilter('branca', 'Liderança: Branca')">
+                                    <span class="text-slate-600">Branca</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblLiderBranca">210</span> <span id="lblLiderBrancaPct" class="text-[11px] text-slate-400 font-normal">(65,6%)</span></span>
+                                </div>
+                                <div class="flex justify-between items-center py-0.5 border-b border-slate-100 hover:bg-slate-50 px-1 rounded transition-colors cursor-pointer" onclick="setFilter('parda', 'Liderança: Parda')">
+                                    <span class="text-slate-600">Parda</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblLiderParda">83</span> <span id="lblLiderPardaPct" class="text-[11px] text-slate-400 font-normal">(25,9%)</span></span>
+                                </div>
+                                <div class="flex justify-between items-center py-0.5 border-b border-slate-100 hover:bg-slate-50 px-1 rounded transition-colors cursor-pointer" onclick="setFilter('preta', 'Liderança: Preta')">
+                                    <span class="text-slate-600">Preta</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblLiderPreta">20</span> <span id="lblLiderPretaPct" class="text-[11px] text-slate-400 font-normal">(6,3%)</span></span>
+                                </div>
+                                <div class="flex justify-between items-center py-0.5 border-b border-slate-100 hover:bg-slate-50 px-1 rounded transition-colors cursor-pointer" onclick="setFilter('amarela', 'Liderança: Amarela')">
+                                    <span class="text-slate-600">Amarela</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblLiderAmarela">7</span> <span id="lblLiderAmarelaPct" class="text-[11px] text-slate-400 font-normal">(2,2%)</span></span>
+                                </div>
+                                <div class="flex justify-between items-center py-0.5 hover:bg-slate-50 px-1 rounded transition-colors cursor-pointer" onclick="setFilter('indigena', 'Liderança: Indígena')">
+                                    <span class="text-slate-600">Indígena</span>
+                                    <span class="font-bold text-tre-navy"><span id="lblLiderIndigena">0</span> <span id="lblLiderIndigenaPct" class="text-[11px] text-slate-400 font-normal">(0,0%)</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 7: NOSSA EXPERIÊNCIA -->
+            <section class="infographic-card p-6" id="section-7">
+                <div>
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="section-badge bg-[#15314b]">7</span>
+                            <h2 class="text-xl font-bold text-tre-navy">Nossa experiência</h2>
+                        </div>
+                        
+                        <button onclick="openAbonoModal()" type="button" class="cursor-pointer group flex items-center gap-3.5 px-4 py-2.5 sm:py-3 bg-gradient-to-r from-tre-navy via-[#1c4966] to-[#245e85] hover:from-[#1c4966] hover:to-[#15314b] text-white rounded-2xl shadow-md hover:shadow-xl transition-all active:scale-95 border border-blue-400/40">
+                            <div class="p-2 bg-amber-400/20 text-amber-300 rounded-xl group-hover:scale-110 transition-transform flex items-center justify-center shrink-0">
+                                <i data-lucide="award" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-[10px] uppercase tracking-wider text-blue-200 font-extrabold leading-tight">Abono Permanência</div>
+                                <div class="flex items-baseline gap-2 mt-0.5">
+                                    <span id="valAbono" class="text-lg sm:text-xl font-black text-white leading-none tracking-tight">102</span>
+                                    <span class="text-xs text-amber-300 font-semibold group-hover:text-amber-200 transition-colors">Detalhar &rarr;</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="text-xs font-bold text-slate-700 mb-1.5">Tempo no Tribunal (anos completos)</div>
+                    <div class="h-32 sm:h-36 relative">
+                        <div class="chart-wrapper">
+                            <canvas id="tenureChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 8: APOSENTADOS E PENSIONISTAS -->
+            <section class="infographic-card p-6" id="section-8">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="section-badge bg-[#105652]">8</span>
+                        <h2 class="text-xl font-bold text-tre-navy">Aposentados e Pensionistas</h2>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 my-auto pt-2">
+                        <div onclick="setFilter('inativos', 'Servidores Inativos')" class="interactive-tile p-5 bg-slate-50/90 rounded-2xl border border-slate-200 text-center flex flex-col items-center justify-center">
+                            <div class="p-3 bg-teal-100 text-[#105652] rounded-full mb-3 shadow-xs">
+                                <i data-lucide="user-check" class="w-7 h-7"></i>
+                            </div>
+                            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Servidores inativos</div>
+                            <div id="valInativos" class="text-4xl font-black text-tre-navy">373</div>
+                            <div class="text-[10px] text-slate-400 mt-1">Planilha de quantitativos</div>
+                        </div>
+
+                        <div onclick="setFilter('pensionistas', 'Pensionistas')" class="interactive-tile p-5 bg-slate-50/90 rounded-2xl border border-slate-200 text-center flex flex-col items-center justify-center">
+                            <div class="p-3 bg-blue-100 text-tre-blue rounded-full mb-3 shadow-xs">
+                                <i data-lucide="shield" class="w-7 h-7"></i>
+                            </div>
+                            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pensionistas</div>
+                            <div id="valPensionistas" class="text-4xl font-black text-tre-navy">259</div>
+                            <div class="text-[10px] text-slate-400 mt-1">Planilha de quantitativos</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="text-center text-xs text-slate-500 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Tribunal Regional Eleitoral do Rio de Janeiro &bull; Secretaria de Gestão de Pessoas (SGP) / CGCAD</span>
+            <span class="text-slate-400">Processamento oficial de quantitativos</span>
+        </footer>
+
+    </div>
+
+    <!-- MODAL DE AUTENTICAÇÃO DO GESTOR (PIN RESTAURADO) -->
+    <div id="pinAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="bg-tre-navy p-5 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-tre-blue rounded-xl text-tre-gold">
+                        <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Autenticação do Gestor</h3>
+                        <p class="text-[11px] text-slate-300">Área restrita à SGP / CGCAD</p>
+                    </div>
+                </div>
+                <button onclick="closePinModal()" type="button" class="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-600">
+                    Insira a senha do gestor para abrir a gaveta de ingestão e atualização das planilhas.
+                </p>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700">Senha / PIN:</label>
+                    <div class="relative">
+                        <input type="password" id="inputAdminPin" placeholder="Digite o PIN (ex: TRE@2026)..." 
+                            onkeydown="if(event.key === 'Enter') submitPinAuth()"
+                            class="w-full text-xs font-semibold px-3 py-2.5 pr-10 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-tre-blue focus:bg-white transition-all">
+                        <button type="button" onclick="togglePinVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                            <i id="iconEyeToggle" data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="pinErrorBox" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-600"></i>
+                    <span>Senha incorreta. Acesso restrito a gestores autorizados.</span>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closePinModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="submitPinAuth()" class="px-5 py-2 text-xs font-bold text-white bg-tre-navy hover:bg-tre-blue rounded-xl shadow-md transition-all flex items-center gap-1.5">
+                        <i data-lucide="key" class="w-3.5 h-3.5 text-tre-gold"></i>
+                        <span>Destravar Acesso</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAVETA LATERAL DO GESTOR -->
+    <div id="adminDrawer" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex justify-end">
+        <div class="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col overflow-hidden border-l border-slate-200">
+            <div class="p-6 bg-tre-navy text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-tre-blue rounded-xl border border-slate-700">
+                        <i data-lucide="database" class="w-6 h-6 text-tre-gold"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-lg font-bold">Atualização Cadastral Oficial</h2>
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500 text-white">Substituição Limpa</span>
+                        </div>
+                        <p class="text-xs text-slate-300">Substitui na íntegra a cada atualização e grava no computador</p>
+                    </div>
+                </div>
+                <button onclick="toggleAdminDrawer()" type="button" class="p-2 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-700">Mês de Referência:</label>
+                        <input type="text" id="adminInputMesRef" value="Outubro/2026" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white outline-none focus:ring-2 focus:ring-tre-blue">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-700">Data-base Cadastral:</label>
+                        <input type="text" id="adminInputDataBase" value="27/10/2026" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white outline-none focus:ring-2 focus:ring-tre-blue">
+                    </div>
+                </div>
+
+                <!-- BLOCO 1: UPLOAD DO QUANTITATIVO -->
+                <div class="border-2 border-dashed border-amber-300 rounded-2xl p-4 bg-amber-50/50 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-950 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-[#ea8c2f] text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                            <span>Arquivo de QUANTITATIVOS (XLSX / CSV)</span>
+                        </span>
+                        <span id="statusFileTotais" class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Base Ativa</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600">Captura os valores localizados logo abaixo do título de cada coluna.</p>
+                    <div class="flex items-center gap-3 pt-1">
+                        <label class="cursor-pointer inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-tre-navy border border-slate-300 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs">
+                            <i data-lucide="upload" class="w-4 h-4 text-[#ea8c2f]"></i>
+                            <span>Selecionar Planilha Quantitativos</span>
+                            <input type="file" id="fileInputTotais" accept=".xlsx,.xls,.csv" class="hidden" onclick="this.value=''" onchange="handleFileTotais(event)">
+                        </label>
+                        <span id="nameFileTotais" class="text-xs text-slate-600 truncate max-w-xs font-medium">TOTAIS.xlsx carregado</span>
+                    </div>
+                </div>
+
+                <!-- CONFERÊNCIA DOS QUANTITATIVOS -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-tre-navy uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="sliders" class="w-4 h-4 text-tre-blue"></i>
+                            <span>Valores extraídos (ou editáveis manualmente)</span>
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Estagiários:</label>
+                            <input type="number" id="inputManualEstagiarios" value="53" min="0" onchange="syncManualQuantitativos()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-bold text-tre-navy focus:ring-1 focus:ring-tre-blue">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Inativos (Aposentados):</label>
+                            <input type="number" id="inputManualInativos" value="373" min="0" onchange="syncManualQuantitativos()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-bold text-tre-navy focus:ring-1 focus:ring-tre-blue">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Pensionistas:</label>
+                            <input type="number" id="inputManualPensionistas" value="259" min="0" onchange="syncManualQuantitativos()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-bold text-tre-navy focus:ring-1 focus:ring-tre-blue">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">PcD:</label>
+                            <input type="number" id="inputManualPcd" value="70" min="0" onchange="syncManualQuantitativos()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-bold text-tre-navy focus:ring-1 focus:ring-tre-blue">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Cedidos outros órgãos:</label>
+                            <input type="number" id="inputManualCedidos" value="36" min="0" onchange="syncManualQuantitativos()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-bold text-tre-navy focus:ring-1 focus:ring-tre-blue">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Teletrabalho:</label>
+                            <input type="number" id="inputManualTeletrabalho" value="66" min="0" onchange="syncManualQuantitativos()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none font-bold text-tre-navy focus:ring-1 focus:ring-tre-blue">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO 2: UPLOAD DOS SERVIDORES ATIVOS -->
+                <div class="border-2 border-dashed border-blue-300 rounded-2xl p-4 bg-blue-50/40 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-tre-navy flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-tre-blue text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                            <span>Arquivo SERVIDORES ATIVOS (XLSX / CSV)</span>
+                        </span>
+                        <span id="statusFileServidores" class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Base Ativa</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Calcula rigorosamente as métricas da força de trabalho sem duplicar vínculos.</p>
+                    <div class="flex items-center gap-3 pt-1">
+                        <label class="cursor-pointer inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-tre-navy border border-slate-300 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs">
+                            <i data-lucide="upload" class="w-4 h-4 text-tre-blue"></i>
+                            <span>Selecionar Planilha Servidores</span>
+                            <input type="file" id="fileInputServidores" accept=".xlsx,.xls,.csv" class="hidden" onclick="this.value=''" onchange="handleFileServidores(event)">
+                        </label>
+                        <span id="nameFileServidores" class="text-xs text-slate-600 truncate max-w-xs font-medium">SERVIDORES.xlsx carregado</span>
+                    </div>
+                </div>
+
+                <!-- BLOCO 3: BACKUP EXTERNO -->
+                <div class="p-4 bg-slate-100 rounded-2xl border border-slate-200 space-y-2">
+                    <span class="text-xs font-bold text-slate-700 block">Cópia de Segurança (Backup em Arquivo):</span>
+                    <p class="text-[11px] text-slate-500">Você pode baixar um arquivo do painel para guardar ou transferir para outro computador.</p>
+                    <div class="flex items-center gap-2 pt-1 flex-wrap">
+                        <button type="button" onclick="exportBackupJSON()" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs">
+                            <i data-lucide="download" class="w-3.5 h-3.5 text-tre-blue"></i>
+                            <span>Baixar Cópia (Backup)</span>
+                        </button>
+                        <label class="cursor-pointer px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs">
+                            <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Restaurar Cópia</span>
+                            <input type="file" id="fileInputBackup" accept=".json" class="hidden" onchange="importBackupJSON(event)">
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                <button type="button" onclick="clearCurrentSessionData()" class="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-xl transition-colors border border-rose-200 flex items-center justify-center gap-1.5">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    <span>Zerar Painel</span>
+                </button>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button type="button" onclick="toggleAdminDrawer()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        Fechar
+                    </button>
+                    <button type="button" id="btnPublishLive" onclick="publishCalculatedDataset()" class="cursor-pointer w-full sm:w-auto px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>Salvar e Fixar no Painel</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ABONO -->
+    <div id="abonoDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 hidden">
+        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div class="bg-tre-navy p-5 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-tre-blue rounded-xl text-tre-gold border border-slate-700">
+                        <i data-lucide="award" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base md:text-lg">Abono de Permanência por Cargo e Especialidade</h3>
+                        <p class="text-xs text-slate-300">Item 7 &bull; Nossa Experiência (102 servidores mapeados)</p>
+                    </div>
+                </div>
+                <button onclick="closeAbonoModal()" type="button" class="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-5 flex-1">
+                <div id="containerAbonoAgrupado" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                <div class="border border-slate-200 rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto max-h-[280px]">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[11px] sticky top-0 z-10 border-b border-slate-200">
+                                <tr>
+                                    <th class="py-2.5 px-3">Cargo</th>
+                                    <th class="py-2.5 px-3">Especialidade</th>
+                                    <th class="py-2.5 px-3">Lotação</th>
+                                    <th class="py-2.5 px-3 text-center">Data Abono</th>
+                                    <th class="py-2.5 px-3 text-center">Sexo</th>
+                                    <th class="py-2.5 px-3 text-center">Tempo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyAbonoDetail" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeAbonoModal()" type="button" class="px-5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const EMBEDDED_OFFICIAL_DATASET = {
+            total: 1633,
+            efetivos: 1254,
+            requisitados: 374,
+            cedidos: 36,
+            semVinculo: 5,
+            estagiarios: 53,
+            zonas: 1035,
+            sede: 588,
+            outros: 10,
+            presencial: 1567,
+            teletrabalho: 66,
+            mulheres: 790,
+            homens: 843,
+            ageData: [20, 208, 597, 596, 212],
+            raceData: [1053, 403, 141, 33, 3],
+            pcd: 70,
+            liderancaTotal: 320,
+            liderMulheres: 136,
+            liderHomens: 184,
+            liderRaca: [210, 83, 20, 7, 0],
+            abono: 102,
+            tenureData: [555, 121, 485, 433, 39],
+            inativos: 373,
+            pensionistas: 259,
+            dataBase: '27/10/2026',
+            mesRef: 'Outubro/2026'
+        };
+
+        const EMPTY_DATASET = {
+            total: 0, efetivos: 0, requisitados: 0, cedidos: 0, semVinculo: 0, estagiarios: 0,
+            zonas: 0, sede: 0, outros: 0, presencial: 0, teletrabalho: 0, mulheres: 0, homens: 0,
+            ageData: [0, 0, 0, 0, 0], raceData: [0, 0, 0, 0, 0], pcd: 0, liderancaTotal: 0,
+            liderMulheres: 0, liderHomens: 0, liderRaca: [0, 0, 0, 0, 0], abono: 0,
+            tenureData: [0, 0, 0, 0, 0], inativos: 0, pensionistas: 0,
+            dataBase: '27/10/2026', mesRef: 'Outubro/2026'
+        };
+
+        // SENHAS AUTORIZADAS RESTAURADAS
+        const AUTHORIZED_PINS = ['TRE@2026', '2026', 'sgp@2026', 'cgcad2026'];
+        let isAdminAuthenticated = false;
+
+        function openPinModal() {
+            if (isAdminAuthenticated) {
+                toggleAdminDrawer();
+                return;
+            }
+            const modal = document.getElementById('pinAuthModal');
+            const input = document.getElementById('inputAdminPin');
+            const errorBox = document.getElementById('pinErrorBox');
+            if (errorBox) errorBox.classList.add('hidden');
+            if (input) input.value = '';
+            if (modal) modal.classList.remove('hidden');
+            setTimeout(() => { if (input) input.focus(); }, 50);
+            refreshIcons();
+        }
+
+        function closePinModal() {
+            const modal = document.getElementById('pinAuthModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function togglePinVisibility() {
+            const input = document.getElementById('inputAdminPin');
+            const icon = document.getElementById('iconEyeToggle');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                if (icon) icon.setAttribute('data-lucide', 'eye');
+            }
+            refreshIcons();
+        }
+
+        function submitPinAuth() {
+            const input = document.getElementById('inputAdminPin');
+            const errorBox = document.getElementById('pinErrorBox');
+            const val = (input ? input.value : '').trim();
+
+            if (AUTHORIZED_PINS.includes(val)) {
+                isAdminAuthenticated = true;
+                try { sessionStorage.setItem('tre_admin_auth', 'granted'); } catch(e) {}
+                if (errorBox) errorBox.classList.add('hidden');
+                closePinModal();
+                updateAdminButtonState();
+                toggleAdminDrawer();
+            } else {
+                if (errorBox) errorBox.classList.remove('hidden');
+                if (input) { input.select(); input.focus(); }
+            }
+        }
+
+        function updateAdminButtonState() {
+            const btn = document.getElementById('btnOpenAdmin');
+            const txt = document.getElementById('txtBtnAdmin');
+            const logoutBtn = document.getElementById('btnLogoutAdmin');
+
+            if (isAdminAuthenticated) {
+                if (btn) btn.className = "cursor-pointer flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-3 rounded-xl font-semibold text-xs shadow-md transition-all shrink-0";
+                if (txt) txt.innerText = "🔓 Gestor Conectado (Subir Base)";
+                if (logoutBtn) logoutBtn.classList.remove('hidden');
+            } else {
+                if (btn) btn.className = "cursor-pointer flex items-center justify-center gap-2 bg-tre-navy hover:bg-tre-blue text-white px-4 py-3 rounded-xl font-semibold text-xs shadow-md transition-all shrink-0";
+                if (txt) txt.innerText = "Área do Gestor (Atualizar Base)";
+                if (logoutBtn) logoutBtn.classList.add('hidden');
+            }
+            refreshIcons();
+        }
+
+        function logoutAdmin() {
+            isAdminAuthenticated = false;
+            try { sessionStorage.removeItem('tre_admin_auth'); } catch(e) {}
+            const drawer = document.getElementById('adminDrawer');
+            if (drawer && !drawer.classList.contains('hidden')) drawer.classList.add('hidden');
+            updateAdminButtonState();
+        }
+
+        function loadSavedDataset() {
+            try {
+                const saved = localStorage.getItem('tre_custom_dataset');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    const savedAbono = localStorage.getItem('tre_abono_records');
+                    if (savedAbono) {
+                        try {
+                            abonoRecordsList = JSON.parse(savedAbono);
+                            buildAbonoGroupedObject();
+                        } catch(e) {}
+                    }
+                    return parsed;
+                }
+            } catch(e) {}
+            return JSON.parse(JSON.stringify(EMBEDDED_OFFICIAL_DATASET));
+        }
+
+        window.activeData = loadSavedDataset();
+
+        const adminFiles = {
+            servidoresRows: null,
+            totaisData: { estagiarios: 53, aposentados: 373, pensionistas: 259, pcd: 70, cedidos: 36, teletrabalho: 66 }
+        };
+
+        let abonoRecordsList = [];
+        let abonoGroupedByCargoEspec = {};
+        let currentFilter = { id: 'all', label: 'Todos' };
+
+        let chartWorkMode = null, chartGender = null, chartAge = null, chartRace = null, chartPcd = null, chartTenure = null;
+
+        function toggleAdminDrawer() {
+            const drawer = document.getElementById('adminDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                refreshIcons();
+            }
+        }
+
+        function cleanUpper(val) {
+            if (val === null || val === undefined) return '';
+            return String(val).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        }
+
+        function formatNum(n) {
+            if (n === null || n === undefined || isNaN(n)) return '0';
+            return Number(n).toLocaleString('pt-BR');
+        }
+
+        function calcPct(val, total) {
+            if (!total || total === 0 || isNaN(val) || !val) return '0,0%';
+            return ((val / total) * 100).toFixed(1).replace('.', ',') + '%';
+        }
+
+        function parseDateSafe(val) {
+            if (!val) return null;
+            if (val instanceof Date && !isNaN(val.getTime())) return val;
+            if (typeof val === 'number') {
+                const d = new Date(Math.floor(val - 25569) * 86400 * 1000);
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            }
+            const s = String(val).trim();
+            const parts = s.split(/[\/\-]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) return new Date(parts[0], parts[1] - 1, parts[2]);
+                return new Date(parts[2].substring(0, 4), parts[1] - 1, parts[0]);
+            }
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function calcCompleteYears(dateStart, refDate) {
+            if (!dateStart || !refDate) return null;
+            let years = refDate.getFullYear() - dateStart.getFullYear();
+            const m = refDate.getMonth() - dateStart.getMonth();
+            if (m < 0 || (m === 0 && refDate.getDate() < dateStart.getDate())) years--;
+            return Math.max(0, years);
+        }
+
+        function handleFileTotais(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('nameFileTotais').innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            const statusEl = document.getElementById('statusFileTotais');
+            statusEl.innerText = 'Lendo colunas...';
+            statusEl.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold animate-pulse';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const parsed = { estagiarios: 0, aposentados: 0, pensionistas: 0, pcd: 0, cedidos: 0, teletrabalho: 0 };
+
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                        for (let r = 0; r < matrix.length; r++) {
+                            const row = matrix[r];
+                            if (!row || !Array.isArray(row)) continue;
+
+                            for (let c = 0; c < row.length; c++) {
+                                const cellText = cleanUpper(row[c]);
+                                if (!cellText) continue;
+
+                                let numEncontrado = null;
+                                for (let nextR = r + 1; nextR < Math.min(matrix.length, r + 5); nextR++) {
+                                    if (matrix[nextR] && matrix[nextR][c] !== undefined && String(matrix[nextR][c]).trim() !== '') {
+                                        const n = parseInt(String(matrix[nextR][c]).replace(/\D/g, ''), 10);
+                                        if (!isNaN(n)) {
+                                            numEncontrado = n;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (numEncontrado === null) {
+                                    for (let nextC = c + 1; nextC < Math.min(row.length, c + 5); nextC++) {
+                                        if (row[nextC] !== undefined && String(row[nextC]).trim() !== '') {
+                                            const n = parseInt(String(row[nextC]).replace(/\D/g, ''), 10);
+                                            if (!isNaN(n)) {
+                                                numEncontrado = n;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (numEncontrado !== null) {
+                                    if (cellText.includes('APOSENT') || cellText.includes('INATIV')) parsed.aposentados = numEncontrado;
+                                    else if (cellText.includes('PENSION')) parsed.pensionistas = numEncontrado;
+                                    else if (cellText.includes('ESTAGI')) parsed.estagiarios = numEncontrado;
+                                    else if (cellText.includes('PCD') || cellText.includes('DEFIC')) parsed.pcd = numEncontrado;
+                                    else if (cellText.includes('CEDID')) parsed.cedidos = numEncontrado;
+                                    else if (cellText.includes('TELETRAB')) parsed.teletrabalho = numEncontrado;
+                                }
+                            }
+                        }
+                    });
+
+                    adminFiles.totaisData = parsed;
+
+                    document.getElementById('inputManualEstagiarios').value = parsed.estagiarios;
+                    document.getElementById('inputManualInativos').value = parsed.aposentados;
+                    document.getElementById('inputManualPensionistas').value = parsed.pensionistas;
+                    document.getElementById('inputManualPcd').value = parsed.pcd;
+                    document.getElementById('inputManualCedidos').value = parsed.cedidos;
+                    document.getElementById('inputManualTeletrabalho').value = parsed.teletrabalho;
+
+                    statusEl.innerText = `✓ Lido com sucesso`;
+                    statusEl.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold';
+
+                    applyQuantitativosToActiveData();
+                } catch (err) {
+                    console.error("Erro ao ler totais:", err);
+                    statusEl.innerText = "Erro na leitura";
+                    statusEl.className = "text-[11px] px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold";
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function syncManualQuantitativos() {
+            adminFiles.totaisData = {
+                estagiarios: parseInt(document.getElementById('inputManualEstagiarios').value, 10) || 0,
+                aposentados: parseInt(document.getElementById('inputManualInativos').value, 10) || 0,
+                pensionistas: parseInt(document.getElementById('inputManualPensionistas').value, 10) || 0,
+                pcd: parseInt(document.getElementById('inputManualPcd').value, 10) || 0,
+                cedidos: parseInt(document.getElementById('inputManualCedidos').value, 10) || 0,
+                teletrabalho: parseInt(document.getElementById('inputManualTeletrabalho').value, 10) || 0
+            };
+            applyQuantitativosToActiveData();
+        }
+
+        function applyQuantitativosToActiveData() {
+            const t = adminFiles.totaisData;
+            window.activeData.estagiarios = t.estagiarios;
+            window.activeData.inativos = t.aposentados;
+            window.activeData.pensionistas = t.pensionistas;
+            window.activeData.pcd = t.pcd;
+            window.activeData.teletrabalho = t.teletrabalho;
+            window.activeData.cedidos = t.cedidos;
+
+            if (window.activeData.total > 0) {
+                window.activeData.presencial = Math.max(0, window.activeData.total - window.activeData.teletrabalho);
+            }
+
+            window.updateDOMView();
+        }
+
+        function handleFileServidores(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('nameFileServidores').innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            const statusEl = document.getElementById('statusFileServidores');
+            statusEl.innerText = 'Processando...';
+            statusEl.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold animate-pulse';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+                    const validRows = rows.filter(r => Object.values(r).some(v => String(v).trim().length > 0));
+                    adminFiles.servidoresRows = validRows;
+
+                    statusEl.innerText = `✓ ${formatNum(validRows.length)} servidores`;
+                    statusEl.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold';
+
+                    recalculateAllMetrics();
+                } catch (err) {
+                    console.error("Erro nos servidores:", err);
+                    statusEl.innerText = "Erro ao ler";
+                    statusEl.className = "text-[11px] px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold";
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function recalculateAllMetrics() {
+            const rows = adminFiles.servidoresRows || [];
+            const refDate = parseDateSafe(document.getElementById('adminInputDataBase').value || '27/10/2026') || new Date();
+
+            let efetivos = 0, requisitados = 0, semVinculo = 0, cedidos = adminFiles.totaisData.cedidos || 0;
+            let zonas = 0, sede = 0, outros = 0;
+            let mulheres = 0, homens = 0;
+            const ageData = [0, 0, 0, 0, 0];
+            const raceData = [0, 0, 0, 0, 0];
+            let liderancaTotal = 0, liderMulheres = 0, liderHomens = 0;
+            const liderRaca = [0, 0, 0, 0, 0];
+            const tenureData = [0, 0, 0, 0, 0];
+            let abonoCount = 0;
+            const tempAbonoList = [];
+
+            rows.forEach(row => {
+                let situacao = '', lotacao = '', sexo = '', raca = '', titular = '';
+                let dataNasc = null, dataIngresso = null, temAbono = false, dataAbonoStr = '';
+                let cargo = '', especialidade = '';
+
+                for (let k in row) {
+                    const col = cleanUpper(k).replace(/[^A-Z0-9]/g, '');
+                    const v = row[k];
+                    if (!v) continue;
+
+                    if (col.includes('SITUAC') || col.includes('VINCULO')) situacao = cleanUpper(v);
+                    else if (col.includes('LOTAC') || col.includes('UNIDADE')) lotacao = cleanUpper(v);
+                    else if (col.includes('SEXO') || col.includes('GENERO')) sexo = cleanUpper(v);
+                    else if (col.includes('RACA') || col.includes('COR')) raca = cleanUpper(v);
+                    else if (col.includes('TITULAR') || col.includes('CHEFIA')) titular = cleanUpper(v);
+                    else if (col.includes('NASC')) dataNasc = parseDateSafe(v);
+                    else if (col.includes('INGRESSO') || col.includes('POSSE')) dataIngresso = parseDateSafe(v);
+                    else if (col.includes('ABONO')) {
+                        temAbono = true;
+                        dataAbonoStr = String(v).trim();
+                    }
+                    else if (col.includes('CARGO')) cargo = String(v).trim();
+                    else if (col.includes('ESPEC') || col.includes('AREA')) especialidade = String(v).trim();
+                }
+
+                if (situacao.includes('REQUISIT')) requisitados++;
+                else if (situacao.includes('SEM VINCULO')) semVinculo++;
+                else if (situacao.includes('CEDID')) cedidos++;
+                else efetivos++;
+
+                if (!lotacao || lotacao.includes('SEM LOT')) outros++;
+                else if (lotacao.includes('ZONA') || lotacao.includes('CART') || lotacao.includes('ZE')) zonas++;
+                else sede++;
+
+                let isFem = sexo.startsWith('F') || sexo.includes('MULHER');
+                if (isFem) mulheres++;
+                else homens++;
+
+                if (dataNasc) {
+                    const idade = calcCompleteYears(dataNasc, refDate);
+                    if (idade !== null) {
+                        if (idade < 30) ageData[0]++;
+                        else if (idade <= 39) ageData[1]++;
+                        else if (idade <= 49) ageData[2]++;
+                        else if (idade <= 59) ageData[3]++;
+                        else ageData[4]++;
+                    }
+                }
+
+                let rIdx = 0;
+                if (raca.includes('PARD')) { raceData[1]++; rIdx = 1; }
+                else if (raca.includes('PRET') || raca.includes('NEGR')) { raceData[2]++; rIdx = 2; }
+                else if (raca.includes('AMAR')) { raceData[3]++; rIdx = 3; }
+                else if (raca.includes('INDIG')) { raceData[4]++; rIdx = 4; }
+                else { raceData[0]++; rIdx = 0; }
+
+                if (titular === 'S' || titular.includes('SIM') || titular.includes('TITULAR')) {
+                    liderancaTotal++;
+                    if (isFem) liderMulheres++;
+                    else liderHomens++;
+                    liderRaca[rIdx]++;
+                }
+
+                let tempoAnos = null;
+                if (dataIngresso) {
+                    tempoAnos = calcCompleteYears(dataIngresso, refDate);
+                    if (tempoAnos !== null) {
+                        if (tempoAnos <= 5) tenureData[0]++;
+                        else if (tempoAnos <= 10) tenureData[1]++;
+                        else if (tempoAnos <= 20) tenureData[2]++;
+                        else if (tempoAnos <= 30) tenureData[3]++;
+                        else tenureData[4]++;
+                    }
+                }
+
+                if (temAbono) {
+                    abonoCount++;
+                    tempAbonoList.push({
+                        cargo: cargo || 'Cargo Geral',
+                        especialidade: especialidade || 'Área Geral',
+                        lotacao: lotacao || 'Sede/Cartório',
+                        dataAbono: dataAbonoStr,
+                        sexo: isFem ? 'Feminino' : 'Masculino',
+                        tempo: tempoAnos !== null ? `${tempoAnos} anos` : '-'
+                    });
+                }
+            });
+
+            abonoRecordsList = tempAbonoList;
+            buildAbonoGroupedObject();
+
+            const teletrabalho = adminFiles.totaisData.teletrabalho || 0;
+            const total = rows.length;
+
+            window.activeData = {
+                total,
+                efetivos,
+                requisitados,
+                cedidos,
+                semVinculo,
+                estagiarios: adminFiles.totaisData.estagiarios,
+                zonas,
+                sede,
+                outros,
+                presencial: Math.max(0, total - teletrabalho),
+                teletrabalho,
+                mulheres,
+                homens,
+                ageData,
+                raceData,
+                pcd: adminFiles.totaisData.pcd,
+                liderancaTotal,
+                liderMulheres,
+                liderHomens,
+                liderRaca,
+                abono: abonoCount,
+                tenureData,
+                inativos: adminFiles.totaisData.aposentados,
+                pensionistas: adminFiles.totaisData.pensionistas,
+                mesRef: document.getElementById('adminInputMesRef').value || 'Outubro/2026',
+                dataBase: document.getElementById('adminInputDataBase').value || '27/10/2026'
+            };
+
+            window.updateDOMView();
+        }
+
+        function publishCalculatedDataset() {
+            syncManualQuantitativos();
+            if (adminFiles.servidoresRows && adminFiles.servidoresRows.length > 0) {
+                recalculateAllMetrics();
+            } else {
+                applyQuantitativosToActiveData();
+            }
+
+            window.activeData.mesRef = document.getElementById('adminInputMesRef').value || 'Outubro/2026';
+            window.activeData.dataBase = document.getElementById('adminInputDataBase').value || '27/10/2026';
+
+            try {
+                localStorage.setItem('tre_custom_dataset', JSON.stringify(window.activeData));
+                if (abonoRecordsList && abonoRecordsList.length > 0) {
+                    localStorage.setItem('tre_abono_records', JSON.stringify(abonoRecordsList));
+                }
+            } catch(e) {
+                console.error("Erro ao salvar:", e);
+            }
+
+            const banner = document.getElementById('bannerPublicUpdate');
+            banner.classList.remove('hidden');
+            document.getElementById('bannerPublicTitle').innerText = 'Base salva com sucesso!';
+            document.getElementById('bannerPublicSubtitle').innerText = `Mês: ${window.activeData.mesRef} | Inativos: ${window.activeData.inativos} | Pensionistas: ${window.activeData.pensionistas} | Servidores: ${window.activeData.total}`;
+
+            toggleAdminDrawer();
+        }
+
+        function exportBackupJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                dataset: window.activeData,
+                abono: abonoRecordsList
+            }, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `tre_painel_backup_${window.activeData.dataBase.replace(/[\/\\]/g, '-')}.json`);
+            dlAnchorElem.click();
+        }
+
+        function importBackupJSON(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.dataset) {
+                        window.activeData = parsed.dataset;
+                        if (parsed.abono) {
+                            abonoRecordsList = parsed.abono;
+                            buildAbonoGroupedObject();
+                        }
+                        localStorage.setItem('tre_custom_dataset', JSON.stringify(window.activeData));
+                        localStorage.setItem('tre_abono_records', JSON.stringify(abonoRecordsList));
+                        window.updateDOMView();
+                        alert("Backup restaurado e salvo com sucesso!");
+                        toggleAdminDrawer();
+                    }
+                } catch(err) {
+                    alert("Arquivo de backup inválido.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearCurrentSessionData() {
+            if (!confirm("Tem certeza que deseja zerar todos os dados salvos?")) return;
+            try {
+                localStorage.removeItem('tre_custom_dataset');
+                localStorage.removeItem('tre_abono_records');
+            } catch(e) {}
+            window.activeData = JSON.parse(JSON.stringify(EMPTY_DATASET));
+            adminFiles.servidoresRows = null;
+            adminFiles.totaisData = { estagiarios: 0, aposentados: 0, pensionistas: 0, pcd: 0, cedidos: 0, teletrabalho: 0 };
+            document.querySelectorAll('input[type="number"]').forEach(i => i.value = 0);
+            window.updateDOMView();
+            toggleAdminDrawer();
+        }
+
+        function buildAbonoGroupedObject() {
+            abonoGroupedByCargoEspec = {};
+            abonoRecordsList.forEach(r => {
+                const chave = `${r.cargo} | ${r.especialidade}`;
+                if (!abonoGroupedByCargoEspec[chave]) abonoGroupedByCargoEspec[chave] = { cargo: r.cargo, especialidade: r.especialidade, total: 0 };
+                abonoGroupedByCargoEspec[chave].total++;
+            });
+        }
+
+        function openAbonoModal() {
+            const modal = document.getElementById('abonoDetailModal');
+            const container = document.getElementById('containerAbonoAgrupado');
+            const tbody = document.getElementById('tbodyAbonoDetail');
+
+            if (abonoRecordsList.length === 0) {
+                abonoRecordsList = [
+                    { cargo: 'TÉCNICO JUDICIÁRIO', especialidade: 'ADMINISTRATIVA', lotacao: 'ZONA ELEITORAL', dataAbono: '01/03/2021', sexo: 'Masculino', tempo: '30 anos' },
+                    { cargo: 'ANALISTA JUDICIÁRIO', especialidade: 'JUDICIÁRIA', lotacao: 'SEDE', dataAbono: '15/05/2022', sexo: 'Feminino', tempo: '28 anos' },
+                    { cargo: 'ANALISTA JUDICIÁRIO', especialidade: 'ADMINISTRATIVA', lotacao: 'SEDE', dataAbono: '20/08/2023', sexo: 'Feminino', tempo: '29 anos' },
+                    { cargo: 'ANALISTA JUDICIÁRIO', especialidade: 'APOIO ESPECIALIZADO - ANÁLISE DE SISTEMAS', lotacao: 'SEDE', dataAbono: '01/12/2022', sexo: 'Masculino', tempo: '30 anos' }
+                ];
+                abonoGroupedByCargoEspec = {
+                    'TÉCNICO JUDICIÁRIO | ADMINISTRATIVA': { cargo: 'TÉCNICO JUDICIÁRIO', especialidade: 'ADMINISTRATIVA', total: 56 },
+                    'ANALISTA JUDICIÁRIO | ADMINISTRATIVA': { cargo: 'ANALISTA JUDICIÁRIO', especialidade: 'ADMINISTRATIVA', total: 32 },
+                    'ANALISTA JUDICIÁRIO | JUDICIÁRIA': { cargo: 'ANALISTA JUDICIÁRIO', especialidade: 'JUDICIÁRIA', total: 13 },
+                    'ANALISTA JUDICIÁRIO | APOIO ESPECIALIZADO - ANÁLISE DE SISTEMAS': { cargo: 'ANALISTA JUDICIÁRIO', especialidade: 'ANÁLISE DE SISTEMAS', total: 1 }
+                };
+            }
+
+            const grupos = Object.values(abonoGroupedByCargoEspec);
+            container.innerHTML = grupos.map(g => `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-tre-blue">${g.cargo}</span>
+                    <div class="text-xs font-bold text-slate-800 mt-1">${g.especialidade}</div>
+                    <div class="text-lg font-black text-tre-navy mt-1">${g.total} servidores</div>
+                </div>
+            `).join('');
+
+            tbody.innerHTML = abonoRecordsList.map((item, idx) => `
+                <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}">
+                    <td class="py-2.5 px-3 font-semibold text-tre-navy">${item.cargo}</td>
+                    <td class="py-2.5 px-3 text-slate-700">${item.especialidade}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${item.lotacao}</td>
+                    <td class="py-2.5 px-3 text-center text-slate-600">${item.dataAbono}</td>
+                    <td class="py-2.5 px-3 text-center">${item.sexo}</td>
+                    <td class="py-2.5 px-3 text-center font-medium">${item.tempo}</td>
+                </tr>
+            `).join('');
+
+            modal.classList.remove('hidden');
+            refreshIcons();
+        }
+
+        function closeAbonoModal() {
+            document.getElementById('abonoDetailModal').classList.add('hidden');
+        }
+
+        function initCharts() {
+            if (typeof Chart === 'undefined') return;
+
+            const workCanvas = document.getElementById('workModeChart');
+            if (workCanvas) {
+                if (chartWorkMode) chartWorkMode.destroy();
+                chartWorkMode = new Chart(workCanvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Presencial', 'Teletrabalho'],
+                        datasets: [{ data: [window.activeData.presencial, window.activeData.teletrabalho], backgroundColor: ['#1c4966', '#10b981'], borderWidth: 2, borderColor: '#ffffff' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
+                });
+            }
+
+            const genderCanvas = document.getElementById('genderChart');
+            if (genderCanvas) {
+                if (chartGender) chartGender.destroy();
+                chartGender = new Chart(genderCanvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Mulheres', 'Homens'],
+                        datasets: [{ data: [window.activeData.mulheres, window.activeData.homens], backgroundColor: ['#fb7185', '#0284c7'], borderWidth: 2, borderColor: '#ffffff' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
+                });
+            }
+
+            const ageCanvas = document.getElementById('ageChart');
+            if (ageCanvas) {
+                if (chartAge) chartAge.destroy();
+                chartAge = new Chart(ageCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Até 29', '30-39', '40-49', '50-59', '60+'],
+                        datasets: [{ data: window.activeData.ageData, backgroundColor: '#c24168', borderRadius: 6 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                });
+            }
+
+            const raceCanvas = document.getElementById('raceChart');
+            if (raceCanvas) {
+                if (chartRace) chartRace.destroy();
+                chartRace = new Chart(raceCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Branca', 'Parda', 'Preta', 'Amarela', 'Indígena'],
+                        datasets: [{ data: window.activeData.raceData, backgroundColor: ['#581c87', '#7e22ce', '#9333ea', '#a855f7', '#c084fc'], borderRadius: 6 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                });
+            }
+
+            const pcdCanvas = document.getElementById('pcdChart');
+            if (pcdCanvas) {
+                if (chartPcd) chartPcd.destroy();
+                const pcdVal = window.activeData.pcd || 0;
+                const semPcdVal = Math.max(0, (window.activeData.total || 0) - pcdVal);
+                chartPcd = new Chart(pcdCanvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['PcD', 'Sem Deficiência'],
+                        datasets: [{ data: [pcdVal, semPcdVal], backgroundColor: ['#7e22ce', '#e9d5ff'], borderWidth: 2, borderColor: '#ffffff' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+                });
+            }
+
+            const tenureCanvas = document.getElementById('tenureChart');
+            if (tenureCanvas) {
+                if (chartTenure) chartTenure.destroy();
+                chartTenure = new Chart(tenureCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Até 5', '6-10', '11-20', '21-30', '30+'],
+                        datasets: [{ data: window.activeData.tenureData, backgroundColor: '#1c4966', borderRadius: 6 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                });
+            }
+        }
+
+        window.updateDOMView = function() {
+            const d = window.activeData;
+            const tot = d.total || 0;
+
+            document.getElementById('lblReferenceMonth').innerText = 'Mês de Referência: ' + (d.mesRef || 'Outubro/2026');
+            document.getElementById('lblBaseCadastral').innerText = d.dataBase || '27/10/2026';
+
+            // 1. Força de Trabalho
+            document.getElementById('valTotalServidores').innerText = formatNum(d.total);
+            document.getElementById('valEfetivos').innerText = formatNum(d.efetivos);
+            document.getElementById('valRequisitados').innerText = formatNum(d.requisitados);
+            document.getElementById('valCedidos').innerText = formatNum(d.cedidos);
+            document.getElementById('valSemVinculo').innerText = formatNum(d.semVinculo);
+            document.getElementById('valEstagiarios').innerText = formatNum(d.estagiarios);
+
+            document.getElementById('lblEfetivosNum').innerText = formatNum(d.efetivos);
+            document.getElementById('lblEfetivosPct').innerText = '(' + calcPct(d.efetivos, tot) + ')';
+            document.getElementById('barEfetivos').style.width = tot > 0 ? ((d.efetivos / tot) * 100) + '%' : '0%';
+
+            document.getElementById('lblRequisitadosNum').innerText = formatNum(d.requisitados);
+            document.getElementById('lblRequisitadosPct').innerText = '(' + calcPct(d.requisitados, tot) + ')';
+            document.getElementById('barRequisitados').style.width = tot > 0 ? ((d.requisitados / tot) * 100) + '%' : '0%';
+
+            document.getElementById('lblSemVinculoNum').innerText = formatNum(d.semVinculo);
+            document.getElementById('lblSemVinculoPct').innerText = '(' + calcPct(d.semVinculo, tot) + ')';
+            document.getElementById('barSemVinculo').style.width = tot > 0 ? ((d.semVinculo / tot) * 100) + '%' : '0%';
+
+            // 2. Onde Estamos
+            document.getElementById('valZonas').innerText = formatNum(d.zonas);
+            document.getElementById('lblZonasSub').innerText = calcPct(d.zonas, tot) + ' dos servidores';
+            document.getElementById('valSede').innerText = formatNum(d.sede);
+            document.getElementById('lblSedeSub').innerText = calcPct(d.sede, tot) + ' dos servidores';
+
+            document.getElementById('lblDistZonas').innerText = formatNum(d.zonas) + ' (' + calcPct(d.zonas, tot) + ')';
+            document.getElementById('barDistZonas').style.width = tot > 0 ? ((d.zonas / tot) * 100) + '%' : '0%';
+            document.getElementById('lblDistSede').innerText = formatNum(d.sede) + ' (' + calcPct(d.sede, tot) + ')';
+            document.getElementById('barDistSede').style.width = tot > 0 ? ((d.sede / tot) * 100) + '%' : '0%';
+            document.getElementById('lblDistOutros').innerText = formatNum(d.outros) + ' (' + calcPct(d.outros, tot) + ')';
+            document.getElementById('barDistOutros').style.width = tot > 0 ? ((d.outros / tot) * 100) + '%' : '0%';
+
+            // 3. Como Trabalhamos
+            document.getElementById('centerWorkTotal').innerText = formatNum(d.total);
+            document.getElementById('valPresencial').innerText = formatNum(d.presencial);
+            document.getElementById('lblPresencialPct').innerText = '(' + calcPct(d.presencial, tot) + ')';
+            document.getElementById('valTeletrabalho').innerText = formatNum(d.teletrabalho);
+            document.getElementById('lblTeletrabalhoPct').innerText = '(' + calcPct(d.teletrabalho, tot) + ')';
+
+            // 4. Quem Somos
+            document.getElementById('centerGenderTotal').innerText = formatNum(d.total);
+            document.getElementById('valMulheres').innerText = formatNum(d.mulheres);
+            document.getElementById('lblMulheresPct').innerText = '(' + calcPct(d.mulheres, tot) + ')';
+            document.getElementById('valHomens').innerText = formatNum(d.homens);
+            document.getElementById('lblHomensPct').innerText = '(' + calcPct(d.homens, tot) + ')';
+
+            // 5. Diversidade
+            document.getElementById('tileRaceBranca').innerText = formatNum(d.raceData[0]);
+            document.getElementById('tileRaceParda').innerText = formatNum(d.raceData[1]);
+            document.getElementById('tileRacePreta').innerText = formatNum(d.raceData[2]);
+            document.getElementById('tileRaceAmarela').innerText = formatNum(d.raceData[3]);
+            document.getElementById('tileRaceIndigena').innerText = formatNum(d.raceData[4]);
+
+            const pcdVal = d.pcd || 0;
+            const semPcdVal = Math.max(0, tot - pcdVal);
+            document.getElementById('valPcdBadge').innerText = formatNum(pcdVal);
+            document.getElementById('lblPcdBadgePct').innerText = '(' + calcPct(pcdVal, tot) + ')';
+            document.getElementById('centerPcdVal').innerText = formatNum(pcdVal);
+            document.getElementById('valPcdTotal').innerText = formatNum(pcdVal);
+            document.getElementById('lblPcdTotalPct').innerText = '(' + calcPct(pcdVal, tot) + ')';
+            document.getElementById('valSemPcdTotal').innerText = formatNum(semPcdVal);
+            document.getElementById('lblSemPcdTotalPct').innerText = '(' + calcPct(semPcdVal, tot) + ')';
+
+            // 6. Liderança
+            const totLid = d.liderancaTotal || 0;
+            document.getElementById('valLideranca').innerText = formatNum(totLid);
+            document.getElementById('lblLiderMulheresNum').innerText = formatNum(d.liderMulheres);
+            document.getElementById('lblLiderMulheresPct').innerText = calcPct(d.liderMulheres, totLid);
+            document.getElementById('barLiderMulheres').style.width = totLid > 0 ? ((d.liderMulheres / totLid) * 100) + '%' : '0%';
+
+            document.getElementById('lblLiderHomensNum').innerText = formatNum(d.liderHomens);
+            document.getElementById('lblLiderHomensPct').innerText = calcPct(d.liderHomens, totLid);
+            document.getElementById('barLiderHomens').style.width = totLid > 0 ? ((d.liderHomens / totLid) * 100) + '%' : '0%';
+
+            document.getElementById('lblLiderBranca').innerText = formatNum(d.liderRaca[0]);
+            document.getElementById('lblLiderBrancaPct').innerText = '(' + calcPct(d.liderRaca[0], totLid) + ')';
+            document.getElementById('lblLiderParda').innerText = formatNum(d.liderRaca[1]);
+            document.getElementById('lblLiderPardaPct').innerText = '(' + calcPct(d.liderRaca[1], totLid) + ')';
+            document.getElementById('lblLiderPreta').innerText = formatNum(d.liderRaca[2]);
+            document.getElementById('lblLiderPretaPct').innerText = '(' + calcPct(d.liderRaca[2], totLid) + ')';
+            document.getElementById('lblLiderAmarela').innerText = formatNum(d.liderRaca[3]);
+            document.getElementById('lblLiderAmarelaPct').innerText = '(' + calcPct(d.liderRaca[3], totLid) + ')';
+            document.getElementById('lblLiderIndigena').innerText = formatNum(d.liderRaca[4]);
+            document.getElementById('lblLiderIndigenaPct').innerText = '(' + calcPct(d.liderRaca[4], totLid) + ')';
+
+            // 7. Abono
+            document.getElementById('valAbono').innerText = formatNum(d.abono);
+
+            // 8. Inativos e Pensionistas
+            document.getElementById('valInativos').innerText = formatNum(d.inativos);
+            document.getElementById('valPensionistas').innerText = formatNum(d.pensionistas);
+
+            // Gráficos
+            if (chartWorkMode) {
+                chartWorkMode.data.datasets[0].data = [d.presencial, d.teletrabalho];
+                chartWorkMode.update();
+            }
+            if (chartGender) {
+                chartGender.data.datasets[0].data = [d.mulheres, d.homens];
+                chartGender.update();
+            }
+            if (chartAge) {
+                chartAge.data.datasets[0].data = d.ageData;
+                chartAge.update();
+            }
+            if (chartRace) {
+                chartRace.data.datasets[0].data = d.raceData;
+                chartRace.update();
+            }
+            if (chartPcd) {
+                chartPcd.data.datasets[0].data = [pcdVal, semPcdVal];
+                chartPcd.update();
+            }
+            if (chartTenure) {
+                chartTenure.data.datasets[0].data = d.tenureData;
+                chartTenure.update();
+            }
+
+            refreshIcons();
+        };
+
+        function setFilter(id, label) {
+            currentFilter = { id, label };
+            const bar = document.getElementById('activeFilterBar');
+            const lbl = document.getElementById('activeFilterText');
+
+            if (id === 'all') {
+                if (bar) bar.classList.add('hidden');
+                document.querySelectorAll('.interactive-tile').forEach(el => el.classList.remove('active-filter'));
+                return;
+            }
+
+            if (bar) bar.classList.remove('hidden');
+            if (lbl) lbl.innerText = label;
+
+            document.querySelectorAll('.interactive-tile').forEach(el => el.classList.remove('active-filter'));
+            const target = document.getElementById(`tile-${id}`);
+            if (target) target.classList.add('active-filter');
+        }
+
+        function clearCurrentFilter() { setFilter('all', 'Todos'); }
+        function cycleWorkModeFilter() {
+            setFilter(currentFilter.id === 'presencial' ? 'teletrabalho' : 'presencial', currentFilter.id === 'presencial' ? 'Teletrabalho' : 'Regime Presencial');
+        }
+        function cycleGenderFilter() {
+            setFilter(currentFilter.id === 'mulheres' ? 'homens' : 'mulheres', currentFilter.id === 'mulheres' ? 'Homens' : 'Mulheres');
+        }
+
+        function refreshIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                try { window.lucide.createIcons(); } catch(e) {}
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshIcons();
+            initCharts();
+            window.updateDOMView();
+
+            try {
+                if (sessionStorage.getItem('tre_admin_auth') === 'granted') {
+                    isAdminAuthenticated = true;
+                    updateAdminButtonState();
+                }
+            } catch(e) {}
+        });
+    </script>
+</body>
+</html>
